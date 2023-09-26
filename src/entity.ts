@@ -230,7 +230,7 @@ export const renderEntitiesRow = (config: RoomCardConfig | RoomCardRow, entities
     if(entities === undefined) {
         return null;
     }   
-
+    console.log('rendering entities');
     return html`<div class="${renderClasses(config, classes)}">${entities.map((entity) => renderEntity(entity, hass, element))}</div>`;
 }
 
@@ -260,6 +260,7 @@ export const renderEntity = (entity: RoomCardEntity, hass: HomeAssistant, elemen
 export const renderRows = (rows: RoomCardRow[], hass: HomeAssistant, element: LitElement)  : HTMLTemplateResult => { 
     const filteredRows = rows.filter(row => { return !hideIfRow(row, hass); });
 
+    console.log('Rendering rows...');
     return html`${filteredRows.map((row) => {
         return renderEntitiesRow(row, row.entities, hass, element);
     })}`;

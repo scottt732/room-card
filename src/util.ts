@@ -1,7 +1,7 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import { html, PropertyValues } from 'lit';
 import { HassEntity } from 'home-assistant-js-websocket';
-import { UNAVAILABLE_STATES } from './lib/constants';
+import { UNAVAILABLE_STATES, LAST_UPDATED } from './lib/constants';
 import { HomeAssistantEntity, RoomCardConfig, RoomCardEntity, EntityCondition, RoomCardLovelaceCardConfig, RoomCardRow, RoomCardIcon, HideIfConfig } from './types/room-card-types';
 import { mapTemplate } from './template';
 
@@ -59,18 +59,6 @@ export const getCardEntities = (card: RoomCardLovelaceCardConfig) : string[] => 
         .concat(card.entities?.flatMap((entity) => getEntity(entity as RoomCardEntity)))
         .filter((entity) => entity);
 }
-
-export const hasConfigOrEntitiesChanged = (node: RoomCardConfig, changedProps: PropertyValues) => {
-    if (changedProps.has('config')) {
-        return true;
-    }
-
-    const oldHass = changedProps.get('_hass') as HomeAssistant;
-    if (oldHass) {
-        return node.entityIds.some((entity: string) => oldHass.states[entity] !== node.hass.states[entity]);
-    }
-    return false;
-};
 
 export const checkConditionalValue = (item: EntityCondition, checkValue: unknown) => {
     const itemValue = typeof item.value === 'boolean' ? String(item.value) : item.value;
