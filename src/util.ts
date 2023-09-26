@@ -9,22 +9,24 @@ export const isObject = (obj: unknown) : boolean => typeof obj === 'object' && !
 
 export const isUnavailable = (stateObj: HomeAssistantEntity) : boolean => !stateObj || UNAVAILABLE_STATES.includes(stateObj.state);
 
-export const getValue = (entity: RoomCardEntity) => {
-    if(entity.attribute && entity.stateObj.attributes[entity.attribute] === undefined) {
+export const getValue = (entity: RoomCardEntity, entityState?: HomeAssistantEntity) => {
+    if(entity.attribute && entityState?.attributes[entity.attribute] === undefined) {
         throw new Error(`Entity: '${entity.entity}' has no attribute named '${entity.attribute}'`);
     }
 
-    return entity.attribute ? entity.stateObj.attributes[entity.attribute] : entity.stateObj.state;
+    return entity.attribute ? entityState.attributes[entity.attribute] : entityState.state;
 }
 
-export const getEntityIds = (config: RoomCardConfig): string[] =>
-    [config.entity]
-        .concat(config.entities?.map((entity) => getEntity(entity)))
-        .concat(config.info_entities?.map((entity) => getEntity(entity)))
-        .concat(config.rows?.flatMap((row) => row.entities).map((entity) => getEntity(entity)))
-        .concat(config.cards?.flatMap((card) => getCardEntities(card)))
-        .concat(getConditionEntitiesFromConfig(config))
-        .filter((entity) => entity);
+export const getEntityIds = (config: RoomCardConfig): string[] => {
+    const result = new Set<string>();
+    result.add(config.entity);
+    config.entities?.forEach((entity) => result.add(getEntity(entity)));
+    config.info_entities?.forEach((entity) => result.add(getEntity(entity)));
+    config.rows?.flatMap((row) => row.entities).forEach((entity) => result.add(getEntity(entity)));
+    config.cards?.flatMap((card) => getCardEntities(card)).forEach((entity) => result.add(entity));
+    getConditionEntitiesFromConfig(config).forEach((entity) => result.add(entity));
+    return Array.from(result);
+}
 
 export const getEntity = (entity?: string | RoomCardEntity) : string => {
     return entity === undefined ? null : typeof entity === 'string' ? entity : entity.entity;
@@ -76,12 +78,9 @@ export const checkConditionalValue = (item: EntityCondition, checkValue: unknown
     }
 }
 
-export const mapStateObject = (entity: RoomCardEntity | string, hass: HomeAssistant, config: RoomCardConfig) : RoomCardEntity => {        
-    let conf = typeof entity === 'string' ? { entity: entity } : entity;
-
-    conf = mapTemplate(conf as RoomCardEntity, config);
-
-    return { ...conf, stateObj: hass.states[conf.entity] };
+export const mapStateObject = (entity: RoomCardEntity | string, hass: HomeAssistant, config: RoomCardConfig, entityState: HomeAssistantEntity) : RoomCardEntity => {        
+    const conf = typeof entity === 'string' ? { entity: entity } : entity;
+    return mapTemplate(conf as RoomCardEntity, config, entityState);
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types
