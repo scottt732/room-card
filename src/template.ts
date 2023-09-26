@@ -9,13 +9,13 @@ export const templateStyling = (stateObj: HomeAssistantEntity, config: RoomCardE
     return icon?.template?.styles !== undefined ? evalTemplate(hass, stateObj, icon.template.styles) : null;
 }
 
-export const mapTemplate = (entity: RoomCardEntity, config: RoomCardConfig, entityState: HomeAssistantEntity) => {
+export const mapTemplate = (entity: RoomCardEntity, config: RoomCardConfig) => {
     if(entity !== undefined && entity.template) {
         const templatesWithMatchingName = config.templates.filter(template => template.name === entity.template);
         if(templatesWithMatchingName.length > 0) {
             const templateFromConfig = templatesWithMatchingName[0];
 
-            return { stateObj: entityState, ...entity, ...templateFromConfig.template };
+            return { stateObj: entity.stateObj, ...entity, ...templateFromConfig.template };
         }
     }
 

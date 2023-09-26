@@ -15,7 +15,7 @@ export interface RoomCardEntity {
     unit?: string;
     hide_unavailable?: boolean;
     hide_if?: HideIfConfig;
-    // stateObj: HomeAssistantEntity;
+    stateObj: HomeAssistantEntity;
     attribute?: string;
     show_state?: boolean;
     styles?: EntityStyles | RoomCardAttributeTemplate;
@@ -110,7 +110,6 @@ export interface RoomCardTemplateDefinition {
 export interface RoomCardLovelaceCardConfig extends LovelaceCardConfig {
     hide_if?: HideIfConfig;
     cards?: RoomCardLovelaceCardConfig[];
-    dirty?: boolean;
     entities?: (string | { entity: string })[];
 }
 

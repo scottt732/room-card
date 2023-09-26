@@ -55,7 +55,7 @@ export default class RoomCard extends LitElement {
     async setConfig(config: RoomCardConfig) {
         checkConfig(config);
         const entityIds = getEntityIds(config);
-        //const compare = this.findEntityIdsInCard(config.cards)
+        ///const compare = this.findEntityIdsInCard(config.cards)
 
         this.config = { ...config, entityIds: entityIds };
 
@@ -127,13 +127,13 @@ export default class RoomCard extends LitElement {
     }
     
     render() : TemplateResult<1> {
-        const entityState = this.config.entity !== undefined ? this.monitoredStates[this.config.entity] : undefined;
-        const config = this.config.entity !== undefined ? { ...this.config, stateObj: entityState } : undefined;
-        const info_entities = this.config.info_entities?.map(entity => mapStateObject(entity, this._hass, this.config, entityState)) ?? [];
-        const entities = this.config.entities?.map(entity => mapStateObject(entity, this._hass, this.config, entityState)) ?? [];
+        const stateObj = this.config.entity !== undefined ? this.monitoredStates[this.config.entity] : undefined;
+        const entity = this.config.entity !== undefined ? { ...this.config, stateObj: stateObj } : undefined;
+        const info_entities = this.config.info_entities?.map(entity => mapStateObject(entity, this._hass, this.config)) ?? [];
+        const entities = this.config.entities?.map(entity => mapStateObject(entity, this._hass, this.config)) ?? [];
         const rows =
             this.config.rows?.map((row) => {
-                const rowEntities = row.entities?.map(entity => mapStateObject(entity, this._hass, this.config, entityState));
+                const rowEntities = row.entities?.map(entity => mapStateObject(entity, this._hass, this.config));
                 return { entities: rowEntities, hide_if: row.hide_if, content_alignment: row.content_alignment };
             }) ?? [];
 
@@ -142,11 +142,11 @@ export default class RoomCard extends LitElement {
         Object.entries(this._entityCards).flatMap(([,value]) => value).forEach(v => {
             console.log(v.config)
         });
-        const result = html`<ha-card elevation="2" style="${entityStyles(this.config.card_styles, entityState, this._hass)}">
+        const result = html`<ha-card elevation="2" style="${entityStyles(this.config.card_styles, stateObj, this._hass)}">
                 <div class="card-header">
-                    ${renderTitle(this.config, this._hass, this, config, entityState)}
+                    ${renderTitle(this.config, this._hass, this, entity)}
                     <div class="entities-info-row">
-                        ${info_entities.map(e => renderInfoEntity(e, this._hass, this, entityState))}
+                        ${info_entities.map(e => renderInfoEntity(e, this._hass, this))}
                     </div>
                 </div>
                 ${rows.length > 0 ? 

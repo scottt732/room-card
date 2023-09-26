@@ -9,12 +9,12 @@ export const isObject = (obj: unknown) : boolean => typeof obj === 'object' && !
 
 export const isUnavailable = (stateObj: HomeAssistantEntity) : boolean => !stateObj || UNAVAILABLE_STATES.includes(stateObj.state);
 
-export const getValue = (entity: RoomCardEntity, entityState?: HomeAssistantEntity) => {
-    if(entity.attribute && entityState?.attributes[entity.attribute] === undefined) {
+export const getValue = (entity: RoomCardEntity) => {
+    if(entity.attribute && entity.stateObj.attributes[entity.attribute] === undefined) {
         throw new Error(`Entity: '${entity.entity}' has no attribute named '${entity.attribute}'`);
     }
 
-    return entity.attribute ? entityState.attributes[entity.attribute] : entityState.state;
+    return entity.attribute ? entity.stateObj.attributes[entity.attribute] : entity.stateObj.state;
 }
 
 export const getEntityIds = (config: RoomCardConfig): string[] => {
@@ -78,9 +78,12 @@ export const checkConditionalValue = (item: EntityCondition, checkValue: unknown
     }
 }
 
-export const mapStateObject = (entity: RoomCardEntity | string, hass: HomeAssistant, config: RoomCardConfig, entityState: HomeAssistantEntity) : RoomCardEntity => {        
-    const conf = typeof entity === 'string' ? { entity: entity } : entity;
-    return mapTemplate(conf as RoomCardEntity, config, entityState);
+export const mapStateObject = (entity: RoomCardEntity | string, hass: HomeAssistant, config: RoomCardConfig) : RoomCardEntity => {        
+    let conf = typeof entity === 'string' ? { entity: entity } : entity;
+
+    conf = mapTemplate(conf as RoomCardEntity, config);
+
+    return { ...conf, stateObj: hass.states[conf.entity] };
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types

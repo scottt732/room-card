@@ -18,12 +18,12 @@ export const checkConfig = (config: RoomCardConfig) => {
 
 export const computeEntity = (entityId: string) => entityId.substr(entityId.indexOf('.') + 1);
 
-export const entityName = (entity: RoomCardEntity, hass: HomeAssistant, entityState?: HomeAssistantEntity) => {
-    const name = getTemplateOrAttribute(entity.name, hass, entityState)
+export const entityName = (entity: RoomCardEntity, hass: HomeAssistant) => {
+    const name = getTemplateOrAttribute(entity.name, hass, entity.stateObj)
 
     return (
         name ||
-        (entity.entity ? entityState.attributes.friendly_name || computeEntity(entityState.entity_id) : null) ||
+        (entity.entity ? entity.stateObj.attributes.friendly_name || computeEntity(entity.stateObj.entity_id) : null) ||
         null
     );
 };
@@ -73,15 +73,15 @@ export const renderCustomStateIcon = (stateObj: HomeAssistantEntity, icon: RoomC
     }
 }
 
-export const entityStateDisplay = (hass: HomeAssistant, entity: RoomCardEntity, entityState?: HomeAssistantEntity) => {
-    if (isUnavailable(entityState)) {
-        return hass.localize(`state.default.${entityState.state}`);
+export const entityStateDisplay = (hass: HomeAssistant, entity: RoomCardEntity) => {
+    if (isUnavailable(entity.stateObj)) {
+        return hass.localize(`state.default.${entity.stateObj.state}`);
     }
 
     let value = getValue(entity);
     let unit = entity.attribute !== undefined
             ? entity.unit
-            : entity.unit || entityState.attributes.unit_of_measurement;
+            : entity.unit || entity.stateObj.attributes.unit_of_measurement;
 
     if (entity.format) {
         ({ value, unit } = extractValue(entity, value, hass, unit));
@@ -92,7 +92,7 @@ export const entityStateDisplay = (hass: HomeAssistant, entity: RoomCardEntity, 
         return `${isNaN(value) ? value : formatNumber(value, hass.locale)}${unit ? ` ${unit}` : ''}`;
     }
 
-    const modifiedStateObj = { ...entityState, attributes: { ...entityState.attributes, unit_of_measurement: unit } };
+    const modifiedStateObj = { ...entity.stateObj, attributes: { ...entity.stateObj.attributes, unit_of_measurement: unit } };
 
     return computeStateDisplay(hass.localize, modifiedStateObj, hass.locale);
 };
@@ -130,19 +130,19 @@ export const renderIcon = (stateObj: HomeAssistantEntity, config: RoomCardEntity
     ></state-badge>`;
 }
 
-export const renderValue = (entity: RoomCardEntity, hass: HomeAssistant, entityState?: HomeAssistantEntity) => {
+export const renderValue = (entity: RoomCardEntity, hass: HomeAssistant) => {
     if (entity.toggle === true) {
-        return html`<ha-entity-toggle .stateObj="${entityState}" .hass="${hass}"></ha-entity-toggle>`;
+        return html`<ha-entity-toggle .stateObj="${entity.stateObj}" .hass="${hass}"></ha-entity-toggle>`;
     }
 
     if (entity.show_icon === true) {
-        return renderIcon(entityState, entity, hass);
+        return renderIcon(entity.stateObj, entity, hass);
     }
 
     if (entity.attribute && [LAST_CHANGED, LAST_UPDATED].includes(entity.attribute)) {
         return html`<ha-relative-time
             .hass=${hass}
-            .datetime=${(entity.attribute === LAST_CHANGED ? entityState.last_changed : entityState.last_updated)}
+            .datetime=${(entity.attribute === LAST_CHANGED ? entity.stateObj.last_changed : entity.stateObj.last_updated)}
             capitalize
         ></ha-relative-time>`;
     }
@@ -160,10 +160,10 @@ export const renderValue = (entity: RoomCardEntity, hass: HomeAssistant, entityS
         ></hui-timestamp-display>`;
     }
     
-    return entityStateDisplay(hass, entity, entityState);
+    return entityStateDisplay(hass, entity);
 }
 
-export const renderMainEntity = (entity: RoomCardEntity | undefined, config: RoomCardConfig, hass: HomeAssistant, entityState: HomeAssistantEntity) : HTMLTemplateResult => {
+export const renderMainEntity = (entity: RoomCardEntity | undefined, config: RoomCardConfig, hass: HomeAssistant) : HTMLTemplateResult => {
     if (entity === undefined) {
         return null;
     }
@@ -174,7 +174,7 @@ export const renderMainEntity = (entity: RoomCardEntity | undefined, config: Roo
         class="main-state entity"
         style="${entityStyles(entity.styles, stateObj, hass)}">
         ${config.entities?.length === 0 || config.icon
-            ? renderIcon(entityState, config, hass, "main-icon")
+            ? renderIcon(entity.stateObj, config, hass, "main-icon")
             : entity.show_state !== undefined && entity.show_state === false ? '' : renderValue(entity, hass)}
     </div>`;
 }  
@@ -183,7 +183,7 @@ export const clickHandler = (element: LitElement, hass: HomeAssistant, entity: R
     handleAction(element, hass, entity, ev.detail.action);
 }
 
-export const renderTitle = (config: RoomCardConfig, hass: HomeAssistant, element: LitElement, entity?: RoomCardEntity, entityState?: HomeAssistantEntity) : HTMLTemplateResult => {
+export const renderTitle = (config: RoomCardConfig, hass: HomeAssistant, element: LitElement, entity?: RoomCardEntity) : HTMLTemplateResult => {
     if(config.hide_title === true)
         return null;
 
@@ -198,17 +198,17 @@ export const renderTitle = (config: RoomCardConfig, hass: HomeAssistant, element
     }
 
     const hasConfigAction = config.tap_action !== undefined || config.double_tap_action !== undefined;
-    const title = getTemplateOrAttribute(config.title, hass, entityState);
+    const title = getTemplateOrAttribute(config.title, hass, entity?.stateObj);
 
     return html`<div class="title${(hasConfigAction ? ' clickable' : null)}" @action=${_handleAction}
     .actionHandler=${actionHandler({
         hasHold: hasAction(entity?.hold_action),
         hasDoubleClick: hasAction(entity?.double_tap_action),
-      })}>${renderMainEntity(entity, config, hass, entityState)} ${title}</div>`;
+      })}>${renderMainEntity(entity, config, hass)} ${title}</div>`;
 }
 
-export const renderInfoEntity = (entity: RoomCardEntity, hass: HomeAssistant, element: LitElement, entityState: HomeAssistantEntity) : HTMLTemplateResult => {
-    if (entity === undefined || !entityState || hideIfEntity(entity, hass)) {
+export const renderInfoEntity = (entity: RoomCardEntity, hass: HomeAssistant, element: LitElement) : HTMLTemplateResult => {
+    if (entity === undefined || !entity.stateObj || hideIfEntity(entity, hass)) {
         return null;
     }               
     
@@ -218,7 +218,7 @@ export const renderInfoEntity = (entity: RoomCardEntity, hass: HomeAssistant, el
         }
     }
 
-    return html`<div class="state entity ${entity.show_icon === true ? 'icon-entity' : ''}" style="${entityStyles(entity.styles, entityState, hass)}" 
+    return html`<div class="state entity ${entity.show_icon === true ? 'icon-entity' : ''}" style="${entityStyles(entity.styles, entity.stateObj, hass)}" 
     @action=${_handleAction}
     .actionHandler=${actionHandler({
         hasHold: hasAction(entity.hold_action),
@@ -234,8 +234,8 @@ export const renderEntitiesRow = (config: RoomCardConfig | RoomCardRow, entities
     return html`<div class="${renderClasses(config, classes)}">${entities.map((entity) => renderEntity(entity, hass, element))}</div>`;
 }
 
-export const renderEntity = (entity: RoomCardEntity, hass: HomeAssistant, element: LitElement, entityState?: HomeAssistantEntity) : HTMLTemplateResult => {    
-    if (entityState === undefined || hideIfEntity(entity, hass)) {
+export const renderEntity = (entity: RoomCardEntity, hass: HomeAssistant, element: LitElement) : HTMLTemplateResult => {    
+    if (entity.stateObj == undefined || hideIfEntity(entity, hass)) {
         return null;
     }                
     
@@ -252,7 +252,7 @@ export const renderEntity = (entity: RoomCardEntity, hass: HomeAssistant, elemen
                 hasDoubleClick: hasAction(entity.double_tap_action),
               })}>
             ${entity.show_name === undefined || entity.show_name ? html`<span>${entityName(entity, hass)}</span>` : ''}
-            <div>${renderIcon(entityState, entity, hass)}</div>
+            <div>${renderIcon(entity.stateObj, entity, hass)}</div>
             ${entity.show_state ? html`<span>${entityStateDisplay(hass, entity)}</span>` : ''}
         </div>`;
 }

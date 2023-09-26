@@ -1,9 +1,9 @@
 import { HomeAssistant, LovelaceCardConfig } from "custom-card-helpers";
-import { HideIfConfig, HomeAssistantEntity, RoomCardEntity, RoomCardRow } from "./types/room-card-types";
+import { HideIfConfig, RoomCardEntity, RoomCardRow } from "./types/room-card-types";
 import { checkConditionalValue, isUnavailable } from "./util";
 
-export const hideUnavailable = (entity: RoomCardEntity, entityState: HomeAssistantEntity) : boolean =>
-    entity.hide_unavailable && isUnavailable(entityState);
+export const hideUnavailable = (entity: RoomCardEntity) : boolean =>
+    entity.hide_unavailable && isUnavailable(entity.stateObj);
 
 export const hideIfCard = (cardConfig: LovelaceCardConfig, hass: HomeAssistant) => {
     if (cardConfig.hide_if === undefined) {
@@ -52,8 +52,8 @@ export const hideIfRow = (row: RoomCardRow, hass: HomeAssistant) => {
     }
 };
 
-export const hideIfEntity = (entity: RoomCardEntity, hass: HomeAssistant, entityState?: HomeAssistantEntity) => {
-    if (hideUnavailable(entity, entityState)) {
+export const hideIfEntity = (entity: RoomCardEntity, hass: HomeAssistant) => {
+    if (hideUnavailable(entity)) {
         return true;
     }
     if (entity.hide_if === undefined) {
@@ -62,7 +62,7 @@ export const hideIfEntity = (entity: RoomCardEntity, hass: HomeAssistant, entity
 
     if (<HideIfConfig>entity.hide_if)
     {
-        const entityValue = entityState.state;
+        const entityValue = entity.stateObj.state;
         const matchedConditions = (entity.hide_if as HideIfConfig).conditions?.filter(item => {
     
             let checkEntityValue = entityValue;
@@ -72,7 +72,7 @@ export const hideIfEntity = (entity: RoomCardEntity, hass: HomeAssistant, entity
             }
 
             if(item.attribute && !item.entity) {                
-                checkEntityValue = entityState.attributes[item.attribute];
+                checkEntityValue = entity.stateObj.attributes[item.attribute];
             }
     
             return checkConditionalValue(item, checkEntityValue);
