@@ -35,7 +35,6 @@ export interface RoomCardConfig extends LovelaceCardConfig {
     hide_title?: boolean;
     cards?: RoomCardLovelaceCardConfig[];
     entityIds: string[];
-    hass?: HomeAssistant;
     icon?: string | RoomCardIcon;
     rows?: RoomCardRow[];
     show_icon?: boolean;
@@ -111,6 +110,7 @@ export interface RoomCardTemplateDefinition {
 export interface RoomCardLovelaceCardConfig extends LovelaceCardConfig {
     hide_if?: HideIfConfig;
     cards?: RoomCardLovelaceCardConfig[];
+    dirty?: boolean;
     entities?: (string | { entity: string })[];
 }
 

@@ -1,7 +1,7 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import { html, PropertyValues } from 'lit';
 import { HassEntity } from 'home-assistant-js-websocket';
-import { UNAVAILABLE_STATES } from './lib/constants';
+import { UNAVAILABLE_STATES, LAST_UPDATED } from './lib/constants';
 import { HomeAssistantEntity, RoomCardConfig, RoomCardEntity, EntityCondition, RoomCardLovelaceCardConfig, RoomCardRow, RoomCardIcon, HideIfConfig } from './types/room-card-types';
 import { mapTemplate } from './template';
 
@@ -17,17 +17,27 @@ export const getValue = (entity: RoomCardEntity) => {
     return entity.attribute ? entity.stateObj.attributes[entity.attribute] : entity.stateObj.state;
 }
 
-export const getEntityIds = (config: RoomCardConfig): string[] =>
-    [config.entity]
-        .concat(config.entities?.map((entity) => getEntity(entity)))
-        .concat(config.info_entities?.map((entity) => getEntity(entity)))
-        .concat(config.rows?.flatMap((row) => row.entities).map((entity) => getEntity(entity)))
-        .concat(config.cards?.flatMap((card) => getCardEntities(card)))
-        .concat(getConditionEntitiesFromConfig(config))
-        .filter((entity) => entity);
+export const getEntityIds = (config: RoomCardConfig): string[] => {
+    const result = new Set<string>();
+    result.add(config.entity);
+    config.entities?.forEach((entity) => result.add(getEntity(entity)));
+    config.info_entities?.forEach((entity) => result.add(getEntity(entity)));
+    config.rows?.flatMap((row) => row.entities).forEach((entity) => result.add(getEntity(entity)));
+    config.cards?.flatMap((card) => getCardEntities(card)).forEach((entity) => result.add(entity));
+    getConditionEntitiesFromConfig(config).forEach((entity) => result.add(entity));
+    return Array.from(result);
+}
 
 export const getEntity = (entity?: string | RoomCardEntity) : string => {
-    return entity === undefined ? null : typeof entity === 'string' ? entity : entity.entity;
+    if (entity === undefined) {
+        return null;
+    } else if (typeof entity === 'string') {
+        return entity;
+    } else if ('entities' in entity) {
+        console.log('boop');
+    } else if (entity.entity) {
+        return entity.entity;
+    }
 }
 
 export const getConditionEntities = (entities?: RoomCardEntity[]) : EntityCondition[] => {
@@ -59,18 +69,6 @@ export const getCardEntities = (card: RoomCardLovelaceCardConfig) : string[] => 
         .concat(card.entities?.flatMap((entity) => getEntity(entity as RoomCardEntity)))
         .filter((entity) => entity);
 }
-
-export const hasConfigOrEntitiesChanged = (node: RoomCardConfig, changedProps: PropertyValues) => {
-    if (changedProps.has('config')) {
-        return true;
-    }
-
-    const oldHass = changedProps.get('_hass') as HomeAssistant;
-    if (oldHass) {
-        return node.entityIds.some((entity: string) => oldHass.states[entity] !== node.hass.states[entity]);
-    }
-    return false;
-};
 
 export const checkConditionalValue = (item: EntityCondition, checkValue: unknown) => {
     const itemValue = typeof item.value === 'boolean' ? String(item.value) : item.value;

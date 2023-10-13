@@ -34,6 +34,11 @@ module.exports = {
         new compressionPlugin({
             test: /\.js(\?.*)?$/i,
         }),
+        new webpack.SourceMapDevToolPlugin({ 
+            filename: 'room-card.js.map', 
+            sourceRoot: './src',
+            include: [ './src/index.ts' ]
+         })
     ],
     resolve: {
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
