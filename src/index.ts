@@ -1,14 +1,18 @@
-import { CSSResult, html, LitElement, PropertyValues, TemplateResult } from 'lit';
+import { CSSResult, html, HTMLTemplateResult, LitElement, PropertyValues, TemplateResult } from 'lit';
 import { property, customElement } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCard, LovelaceCardConfig } from 'custom-card-helpers';
 
-import { checkConfig, entityStyles, renderEntitiesRow, renderInfoEntity, renderRows, renderTitle } from './entity';
-import { getEntityIds, mapStateObject } from './util';
-import { hideIfCard } from './hide';
+import { checkConfig, entityStyles, renderEntity } from './entity';
+import { getEntityIds, mapStateObject, renderClasses } from './util';
+import { hideIfCard, hideIfRow } from './hide';
 import { style } from './styles';
-import { HomeAssistantEntity, RoomCardConfig, RoomCardEntity, RoomCardLovelaceCardConfig, RoomCardRow } from './types/room-card-types';
+import { RoomCardConfig, RoomCardLovelaceCardConfig, RoomCardRow } from './types/room-card-types';
 import * as packageJson from '../package.json';
-import { HassEntities, HassEntity } from 'home-assistant-js-websocket/dist/types';
+import { HassEntities } from 'home-assistant-js-websocket/dist';
+
+import './templates/room-card-header';
+import './templates/entities-row';
+import './templates/info-entity';
 
 console.info(
     `%c ROOM-CARD %c ${packageJson.version}`,
@@ -28,12 +32,10 @@ console.info(
 
 @customElement('room-card')
 export default class RoomCard extends LitElement {
-    @property({ hasChanged: () => false }) _hass?: HomeAssistant;
+    private _hass?: HomeAssistant;
     @property() monitoredStates?: HassEntities;
     @property() config?: RoomCardConfig;
     @property() _helpers: { createCardElement(config: LovelaceCardConfig): LovelaceCard }
-
-    private _entityCards: { [key: string]: { card?: LovelaceCard, config: RoomCardLovelaceCardConfig, index: number }[]} = {};
 
     getChildCustomCardTypes(cards: RoomCardLovelaceCardConfig[], target: Set<string>) {
         if (!cards) return;        
@@ -55,25 +57,16 @@ export default class RoomCard extends LitElement {
     async setConfig(config: RoomCardConfig) {
         checkConfig(config);
         const entityIds = getEntityIds(config);
-        ///const compare = this.findEntityIdsInCard(config.cards)
-
         this.config = { ...config, entityIds: entityIds };
 
         await this.waitForDependentComponents(config);
 
         /* eslint-disable @typescript-eslint/no-explicit-any */
         this._helpers = await (window as any).loadCardHelpers();
-
-        // this._entityCards = {};
-
-        /* eslint-enable @typescript-eslint/no-explicit-any */
-        // console.log(this._helpers);
-        this.createCardElements();
-        // await this.requestUpdate();
-
-        // console.log('all components online');
     }
 
+    @property()
+    get hass() { return this._hass; }
     set hass(hass: HomeAssistant) {
         let anyUpdates = false;
         const newStates: HassEntities = {};
@@ -104,7 +97,7 @@ export default class RoomCard extends LitElement {
 
         if (anyUpdates) {
             for (const [k, v] of Object.entries(newStates)) {
-                console.log(` + ${k}:`,v);
+                // console.log(` + ${k}:`,v);
             }
             this.monitoredStates = newStates;
         }
@@ -118,7 +111,6 @@ export default class RoomCard extends LitElement {
             && this._helpers !== undefined
             && this._helpers.createCardElement !== undefined;
 
-        console.log(`should update? ${result}`, changedProps);
         return result;
     }
 
@@ -128,36 +120,50 @@ export default class RoomCard extends LitElement {
     
     render() : TemplateResult<1> {
         const stateObj = this.config.entity !== undefined ? this.monitoredStates[this.config.entity] : undefined;
-        const entity = this.config.entity !== undefined ? { ...this.config, stateObj: stateObj } : undefined;
-        const info_entities = this.config.info_entities?.map(entity => mapStateObject(entity, this._hass, this.config)) ?? [];
-        const entities = this.config.entities?.map(entity => mapStateObject(entity, this._hass, this.config)) ?? [];
-        const rows =
-            this.config.rows?.map((row) => {
-                const rowEntities = row.entities?.map(entity => mapStateObject(entity, this._hass, this.config));
-                return { entities: rowEntities, hide_if: row.hide_if, content_alignment: row.content_alignment };
-            }) ?? [];
-
-        this.createCardElements();        
-        
-        Object.entries(this._entityCards).flatMap(([,value]) => value).forEach(v => {
-            console.log(v.config)
-        });
         const result = html`<ha-card elevation="2" style="${entityStyles(this.config.card_styles, stateObj, this._hass)}">
                 <div class="card-header">
-                    ${renderTitle(this.config, this._hass, this, entity)}
+                    <room-card-header 
+                        .hass=${this.hass} 
+                        .config=${this.config}>
+                    </room-card-header>
                     <div class="entities-info-row">
-                        ${info_entities.map(e => renderInfoEntity(e, this._hass, this))}
+                        ${this.config.info_entities.map(e => html`<info-entity 
+                            .hass=${this.hass}
+                            .config=${this.config}
+                            .entity=${e}></info-entity>`)}
                     </div>
                 </div>
-                ${rows.length > 0 ? 
-                    renderRows(rows, this._hass, this) : 
-                    renderEntitiesRow(this.config, entities, this._hass, this)}
-                ${Object.entries(this._entityCards).flatMap(([,value]) => value).map(v => v.card)}
+                ${this.config.entities !== undefined
+                    ? html`<entities-row 
+                        .hass=${this.hass} 
+                        .config=${this.config}
+                        .entities=${this.config.entities}></entities-row>`
+                    : null}
+                ${this.config.rows !== undefined
+                    ? this.config.rows
+                        .filter(row => !hideIfRow(row, this._hass))
+                        .map(row => {
+                            const rowEntities = row.entities?.map(entity => mapStateObject(entity, this._hass, this.config));
+                            return { entities: rowEntities, hide_if: row.hide_if, content_alignment: row.content_alignment };
+                        })
+                        .map(row => html`<entities-row 
+                            .hass=${this.hass}
+                            .config=${row}
+                            .entities=${row.entities}></entities-row>`)
+                    : null}
+                ${this.config.cards
+                    ?.map(card => html`<div class="card">
+                        ${this.createCardElement(card)}
+                    </div>`)}
             </ha-card>`;
 
         return result;
     }
 
+    renderRows(rows: RoomCardRow[], hass: HomeAssistant, element: LitElement): HTMLTemplateResult { 
+        return html`${rows.filter(row => !hideIfRow(row, hass)).map((row) => html`<div class="${renderClasses(row)}">${row.entities.map((entity) => renderEntity(entity, hass, element))}</div>`)}`;
+    }
+    
     getCardSize() {
         const numberOfCards = this.config.cards ? this.config.cards.length : 0;
         const numberOfRows = this.config.rows ? this.config.rows.length : 0;
@@ -177,38 +183,14 @@ export default class RoomCard extends LitElement {
         }
     }
 
-    createCardElements() {
-        this._entityCards = {};
-        if (!this.config.cards) return;
-
-        let i = 0;
-        for (const cardConfig of this.config.cards)
-        {
-            const lovelaceCard = this.createCardElement(cardConfig, this._hass);
-            // const entityIds = this.findEntityIdsInCard(cardConfig);
-
-            for (const entityId of this.config.entityIds) {
-                if (!(entityId in this._entityCards)) {
-                    this._entityCards[entityId] = [];
-                }
-                this._entityCards[entityId].push({ config: cardConfig, card: lovelaceCard, index: i });
-            }
-
-            i++;
-        }
-    }
-
-    createCardElement(config: RoomCardLovelaceCardConfig, hass: HomeAssistant) {
-        if (
-            hideIfCard(config, hass) ||
-            (config.show_states && !config.show_states.includes(hass.states[config.entity].state))
-        ) {
-            console.log('skipping');
+    createCardElement(config: RoomCardLovelaceCardConfig) {
+        if (hideIfCard(config, this.hass) || (config.show_states && !config.show_states.includes(this.hass.states[config.entity].state))) {
             return;
         }
-        
+
         const element: LovelaceCard = this._helpers.createCardElement(config);
-        element.hass = hass;
+
+        element.hass = this.hass;
         element.style.boxShadow = 'none';
         element.style.borderRadius = '0';
 

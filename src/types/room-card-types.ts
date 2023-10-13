@@ -110,6 +110,7 @@ export interface RoomCardTemplateDefinition {
 export interface RoomCardLovelaceCardConfig extends LovelaceCardConfig {
     hide_if?: HideIfConfig;
     cards?: RoomCardLovelaceCardConfig[];
+    dirty?: boolean;
     entities?: (string | { entity: string })[];
 }
 

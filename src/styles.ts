@@ -18,20 +18,6 @@ export const style = css`
     .entity span {
         font-size: 10px;
     }
-    .entities-row {
-        flex-direction: row;
-        flex-wrap: wrap;
-        display: inline-flex;
-        align-items: center;
-        padding: 0 20px 10px 20px;
-    }
-    .entities-row .entity {
-        margin-right: 16px;
-    }    
-    .entities-row .entity:last-of-type,
-    .entities-info-row .entity:last-of-type {
-        margin-right: 0;
-    }
     .entities-column {
         flex-direction: column;
         display: flex;
@@ -55,12 +41,19 @@ export const style = css`
         right: 20px;
         top: 15px;
     }
+
+    .entities-info-row .entity:last-of-type {
+        margin-right: 0;
+    }
+
     .entities-info-row .entity {
         margin-right: 16px;
     }
+
     .entities-info-row .entity.icon-entity {
         margin-right: 0px;
     }
+
     .main-state {
         float: left;
         margin-right: 10px;

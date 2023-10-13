@@ -3,9 +3,8 @@ import { HomeAssistant } from "custom-card-helpers";
 import { HomeAssistantEntity, RoomCardAttributeTemplate, RoomCardConfig, RoomCardEntity, RoomCardIcon } from "./types/room-card-types";
 import { evalTemplate } from "./util";
 
-export const templateStyling = (stateObj: HomeAssistantEntity, config: RoomCardEntity | RoomCardConfig, hass: HomeAssistant) : Function => {
-    const icon = (config.icon as RoomCardIcon);
-
+export const templateStyling = (stateObj: HomeAssistantEntity, hass: HomeAssistant, icon?: string | RoomCardIcon) : Function => {
+    if (typeof icon === 'string') return null;
     return icon?.template?.styles !== undefined ? evalTemplate(hass, stateObj, icon.template.styles) : null;
 }
 

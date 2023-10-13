@@ -28,25 +28,20 @@ export const entityName = (entity: RoomCardEntity, hass: HomeAssistant) => {
     );
 };
 
-export const entityIcon = (stateObj: HomeAssistantEntity, config: RoomCardEntity | RoomCardConfig, hass: HomeAssistant) => {
-    if('icon' in config && (config.show_icon === undefined || config.show_icon === false)) {
-        throw new Error(`Entity: ${config.entity} => Icon defined but show_icon is set to false or not defined. Please set show_icon to true`);
-    }
-
-    if (!('icon' in config)) return stateObj.attributes.icon || null;
-    if (typeof config.icon === 'string') return config.icon;
-
-    if(config.icon.state_on) return renderCustomStateIcon(stateObj, config.icon as RoomCardIcon);
-    if(config.icon.conditions) return renderConditionIcons(stateObj, config, hass);
-    if(config.icon.template?.icon) return evalTemplate(hass, stateObj, config.icon.template.icon);
+export const entityIcon = (stateObj: HomeAssistantEntity, hass: HomeAssistant, icon?: string | RoomCardIcon) => {
+    if (!icon) return stateObj.attributes.icon || null;
+    if (typeof icon === 'string') return icon;
+    if(icon.state_on) return renderCustomStateIcon(stateObj, icon as RoomCardIcon);
+    if(icon.conditions) return renderConditionIcons(stateObj, icon, hass);
+    if(icon.template?.icon) return evalTemplate(hass, stateObj, icon.template.icon);
 }
 
-export const renderConditionIcons = (stateObj: HomeAssistantEntity, config: RoomCardEntity | RoomCardConfig, hass: HomeAssistant) => {
+export const renderConditionIcons = (stateObj: HomeAssistantEntity, icon: RoomCardIcon, hass: HomeAssistant) => {
     const entityValue = stateObj.state;
-    const iconConditions = (config.icon as RoomCardIcon).conditions as EntityCondition[];
-    const matchedConditions = iconConditions.filter(item => {
-
+    const matchedConditions = icon.conditions.filter(item => {
         let checkEntityValue = entityValue;
+        
+        // TODO: Why not use stateObj?
         if(item.entity) {
             const entity = hass.states[item.entity];
             checkEntityValue = item.attribute ? entity.attributes[item.attribute] : entity.state;
@@ -75,7 +70,7 @@ export const renderCustomStateIcon = (stateObj: HomeAssistantEntity, icon: RoomC
 
 export const entityStateDisplay = (hass: HomeAssistant, entity: RoomCardEntity) => {
     if (isUnavailable(entity.stateObj)) {
-        return hass.localize(`state.default.${entity.stateObj.state}`);
+        return hass.localize(`state.default.${entity.stateObj?.state}`);
     }
 
     let value = getValue(entity);
@@ -118,12 +113,12 @@ export const renderIcon = (stateObj: HomeAssistantEntity, config: RoomCardEntity
         return null;
     }
 
-    const customIcon = entityIcon(stateObj, config, hass);
-    const customStyling = templateStyling(stateObj, config, hass);
+    const customIcon = entityIcon(stateObj, hass, config.icon);
+    const customStyling = templateStyling(stateObj, hass, config.icon);
 
     return html`<state-badge
         class="icon-small ${classes}"
-        .stateObj="${stateObj}"
+        .stateObj=${stateObj}
         .overrideIcon="${isObject(customIcon) ? (customIcon as EntityCondition).icon : customIcon as string}"
         .stateColor="${config.state_color}"
         style="${customStyling ?? entityStyles(isObject(customIcon) ? (customIcon as EntityCondition).styles : null, hass.states[config.entity], hass)}"
@@ -183,34 +178,10 @@ export const clickHandler = (element: LitElement, hass: HomeAssistant, entity: R
     handleAction(element, hass, entity, ev.detail.action);
 }
 
-export const renderTitle = (config: RoomCardConfig, hass: HomeAssistant, element: LitElement, entity?: RoomCardEntity) : HTMLTemplateResult => {
-    if(config.hide_title === true)
-        return null;
-
-    const _handleAction = (ev: ActionHandlerEvent): void => {
-        if (hass && ev.detail.action) {
-            clickHandler(element, hass, entity ?? { 
-                tap_action: config.tap_action,
-                double_tap_action: config.double_tap_action,
-                hold_action: config.hold_action
-              } as RoomCardEntity, ev);
-        }
-    }
-
-    const hasConfigAction = config.tap_action !== undefined || config.double_tap_action !== undefined;
-    const title = getTemplateOrAttribute(config.title, hass, entity?.stateObj);
-
-    return html`<div class="title${(hasConfigAction ? ' clickable' : null)}" @action=${_handleAction}
-    .actionHandler=${actionHandler({
-        hasHold: hasAction(entity?.hold_action),
-        hasDoubleClick: hasAction(entity?.double_tap_action),
-      })}>${renderMainEntity(entity, config, hass)} ${title}</div>`;
-}
-
 export const renderInfoEntity = (entity: RoomCardEntity, hass: HomeAssistant, element: LitElement) : HTMLTemplateResult => {
     if (entity === undefined || !entity.stateObj || hideIfEntity(entity, hass)) {
         return null;
-    }               
+    }
     
     const _handleAction = (ev: ActionHandlerEvent): void => {
         if (hass && entity && ev.detail.action) {
@@ -230,7 +201,7 @@ export const renderEntitiesRow = (config: RoomCardConfig | RoomCardRow, entities
     if(entities === undefined) {
         return null;
     }   
-    console.log('rendering entities');
+    // console.log('rendering entities');
     return html`<div class="${renderClasses(config, classes)}">${entities.map((entity) => renderEntity(entity, hass, element))}</div>`;
 }
 
@@ -260,7 +231,7 @@ export const renderEntity = (entity: RoomCardEntity, hass: HomeAssistant, elemen
 export const renderRows = (rows: RoomCardRow[], hass: HomeAssistant, element: LitElement)  : HTMLTemplateResult => { 
     const filteredRows = rows.filter(row => { return !hideIfRow(row, hass); });
 
-    console.log('Rendering rows...');
+    // console.log('Rendering rows...');
     return html`${filteredRows.map((row) => {
         return renderEntitiesRow(row, row.entities, hass, element);
     })}`;

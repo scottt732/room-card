@@ -7,10 +7,10 @@ module.exports = {
     entry: path.resolve(__dirname, 'src', 'index.ts'),
     output: {
         filename: 'room-card.js',
-        path: path.resolve(__dirname),        
+        path: path.resolve(__dirname),
     },
     optimization: {
-        minimize: true,        
+        minimize: true
     },
     module: {
         rules: [
@@ -18,7 +18,7 @@ module.exports = {
                 test: /\.js$/,
                 exclude: /(node_modules)/,
                 use: {
-                    loader: 'babel-loader',                    
+                    loader: 'babel-loader',
                     options: {
                         presets: ['@babel/preset-env'],
                     },
@@ -34,10 +34,13 @@ module.exports = {
         new compressionPlugin({
             test: /\.js(\?.*)?$/i,
         }),
-        new webpack.SourceMapDevToolPlugin({})
+        new webpack.SourceMapDevToolPlugin({ 
+            filename: 'room-card.js.map', 
+            sourceRoot: './src',
+            include: [ './src/index.ts' ]
+         })
     ],
     resolve: {
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
     }
 };
-

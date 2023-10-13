@@ -29,7 +29,15 @@ export const getEntityIds = (config: RoomCardConfig): string[] => {
 }
 
 export const getEntity = (entity?: string | RoomCardEntity) : string => {
-    return entity === undefined ? null : typeof entity === 'string' ? entity : entity.entity;
+    if (entity === undefined) {
+        return null;
+    } else if (typeof entity === 'string') {
+        return entity;
+    } else if ('entities' in entity) {
+        console.log('boop');
+    } else if (entity.entity) {
+        return entity.entity;
+    }
 }
 
 export const getConditionEntities = (entities?: RoomCardEntity[]) : EntityCondition[] => {
